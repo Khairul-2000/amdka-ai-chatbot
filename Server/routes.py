@@ -2,10 +2,18 @@ from fastapi import APIRouter, File, UploadFile, HTTPException
 import os
 from uuid import uuid4
 import sys
+from pydantic import BaseModel
 from Image_Analysis.Image_search.image import image_analysis
+from Chatbot.Main import main
+import json
 
 router = APIRouter()
 
+
+# ---------------------------
+class ChatRequest(BaseModel):
+    thread_id: str
+    user_input: str
 
 # Add parent directory to path to import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,6 +52,16 @@ async def upload_file(file: UploadFile = File(...)):
         # Process the image and get analysis result
         result = image_analysis(file_path)
 
-        return {"analysis_result": result}
+        result_json = json.loads(result)
 
+        return {"data": result_json}
 
+@router.post("/chat")
+async def chat_with_bot(chat_request: ChatRequest):
+    # Here you would integrate with your chatbot logic
+
+    response = main(chat_request.thread_id, chat_request.user_input)
+
+    response_json = json.loads(response)
+
+    return {"data": response_json}

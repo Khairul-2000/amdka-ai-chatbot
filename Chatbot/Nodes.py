@@ -1,5 +1,5 @@
 from langchain_core.messages import  AIMessage, SystemMessage
-from config import AIState, model
+from .config import AIState, model
 
 
 

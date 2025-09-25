@@ -1,21 +1,15 @@
-from typing import Annotated, Sequence, TypedDict
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import  HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-# from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.memory import MemorySaver
-from Mongodb import MongoDBSaver
+from langgraph.checkpoint.postgres import PostgresSaver
+from .config import AIState, tools
+from .Nodes import agent_node, tool_output_node
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# from langgraph.checkpoint.postgres import PostgresSaver
-import uuid
-from config import AIState, tools
-from Nodes import agent_node, tool_output_node
-
-
-
-# saver = PostgresSaver.from_conn_string("postgresql://amdka_database_ui6s_user:I5yzse0ifqKIAce0AG4knOhoC8tOoIbt@dpg-d3981l1r0fns738g3pqg-a.oregon-postgres.render.com/amdka_database_ui6s")
 
 # ---------------------------
 # Build Graph
@@ -42,59 +36,52 @@ graph.set_entry_point("agent")
 
 
 
-# ---------------------------
-# Memory Setup
-# ---------------------------
-# Create memory saver for persistent conversations
-# memory = MemorySaver()
-
-mongodb = MongoDBSaver()
-
-# Compile app with memory
-app = graph.compile(checkpointer=mongodb)
 
 
 
-# ---------------------------
-# Example usage with Memory
-# ---------------------------
-if __name__ == "__main__":
-    # Create a unique thread ID for this conversation
-    thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+
+def main(thread_id: str, user_input: str):
     
-    print(f"🧠 Testing with Memory (Session: {thread_id[:8]})")
-    print("="*60)
 
-    Option = True
-    while Option:
+    with PostgresSaver.from_conn_string(os.getenv("POSTGRES_URI")) as checkpointer:
+        # checkpointer.setup()
+
+    
+        # Compile app with the checkpointer
+        app = graph.compile(checkpointer=checkpointer)
+  
         
-        user_input = input("👤 You: ")
-        if user_input.lower() in ['quit', 'exit', 'bye']:
-            break
+        with open("thread_id.txt", "w") as f:
+            f.write(thread_id)
+        config = {"configurable": {"thread_id":thread_id}}
             
-        # First message
+        print(f"🧠 Testing with Memory (Session: {thread_id[:8]})")
+        print("="*60)
+
+                # First message
         messages = [HumanMessage(content=user_input)]
-      
+            
         print("\n" + "="*50 + "\n")
 
-        result = app.invoke({"messages": [("user", messages[0])]}, config=config)
+        result = app.invoke({"messages":messages}, config=config)
 
         print("🤖 Bot Response (JSON):")
-        # Get the final AI response (last message that's not a tool call response)
+                # Get the final AI response (last message that's not a tool call response)
         for msg in reversed(result["messages"]):
             if (hasattr(msg, 'content') and 
                 type(msg).__name__ == 'AIMessage' and 
                 not msg.content.startswith('{"success"') and
                 not msg.content.startswith('Found')):
                 try:
-                    # Try to parse and pretty print JSON
+                            # Try to parse and pretty print JSON
                     import json
                     response_json = json.loads(msg.content)
                     print(json.dumps(response_json, indent=2))
+                    return json.dumps(response_json, indent=2)
                 except:
                     # If it's not valid JSON, print as is
                     print(msg.content)
                 break
-        
+
      
+           

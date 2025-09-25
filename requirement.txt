@@ -3,3 +3,4 @@ langchain-openai
 requests
 pymongo
 python-dotenv
+psycopg2-binary

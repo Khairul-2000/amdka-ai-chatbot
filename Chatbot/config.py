@@ -2,7 +2,7 @@ from typing import Annotated, Sequence, TypedDict
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph.message import add_messages
-from Tools import product_search
+from .Tools import product_search
 from dotenv import load_dotenv
 import os
 
