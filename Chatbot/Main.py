@@ -8,6 +8,7 @@ from .config import AIState, tools
 from .Nodes import agent_node, tool_output_node
 import os
 from dotenv import load_dotenv
+import re
 load_dotenv()
 
 
@@ -66,7 +67,7 @@ def main(thread_id: str, user_input: str):
         result = app.invoke({"messages":messages}, config=config)
 
         print("🤖 Bot Response (JSON):")
-                # Get the final AI response (last message that's not a tool call response)
+        # Get the final AI response (last message that's not a tool call response)
         for msg in reversed(result["messages"]):
             if (hasattr(msg, 'content') and 
                 type(msg).__name__ == 'AIMessage' and 
@@ -75,6 +76,12 @@ def main(thread_id: str, user_input: str):
                 try:
                             # Try to parse and pretty print JSON
                     import json
+
+                    if(msg.content.strip().startswith("```json")):
+                        # Extract JSON from code block
+                        match = re.search(r"```json(.*?)```", msg.content, re.DOTALL)
+                        if match:
+                            msg.content = match.group(1).strip()
                     response_json = json.loads(msg.content)
                     print(json.dumps(response_json, indent=2))
                     return json.dumps(response_json, indent=2)
